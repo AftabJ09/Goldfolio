@@ -1,1 +1,403 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Goldfolio - Digital Gold Dashboard</title>
+    
+    <!-- External Libraries -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <!-- Our Files -->
+    <link rel="stylesheet" href="style.css">
+    
+    <style>
+        /* Additional inline styles for micro-decimal support */
+        .micro-value {
+            font-family: 'SF Mono', 'Monaco', 'Consolas', monospace;
+            font-size: 0.95em;
+            letter-spacing: 0.5px;
+        }
+        
+        .scientific-notation {
+            background: #f0f7ff;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-family: monospace;
+            font-size: 0.9em;
+            color: #1a237e;
+        }
+        
+        .decimal-input {
+            font-family: 'SF Mono', monospace;
+            text-align: right;
+        }
+        
+        .very-small {
+            color: #ff6b6b;
+            font-size: 0.9em;
+        }
+        
+        .very-small::after {
+            content: " ⚡";
+            font-size: 0.8em;
+        }
+    </style>
+</head>
+<body>
+    <!-- Login Screen -->
+    <div id="login-screen" class="screen active">
+        <div class="login-container">
+            <div class="login-header">
+                <i class="fas fa-chart-line gold-icon"></i>
+                <h1>Goldfolio</h1>
+                <p>Digital Gold Investment Tracker</p>
+                <p class="version">Supports micro-transactions up to 0.0000001g</p>
+            </div>
+            <form id="login-form">
+                <div class="input-group">
+                    <i class="fas fa-key"></i>
+                    <input type="password" id="password" placeholder="Enter dashboard password" required>
+                </div>
+                <button type="submit" class="btn btn-primary">
+                    <i class="fas fa-unlock"></i> Unlock Dashboard
+                </button>
+                <p class="hint">First time? Enter any password to set it</p>
+                <div class="security-note">
+                    <i class="fas fa-info-circle"></i>
+                    All data stored locally in your browser
+                </div>
+            </form>
+        </div>
+    </div>
 
+    <!-- Main Dashboard -->
+    <div id="dashboard" class="screen">
+        <!-- Header -->
+        <header class="dashboard-header">
+            <div class="brand">
+                <i class="fas fa-chart-line"></i>
+                <h1>Goldfolio</h1>
+                <div class="subtitle">
+                    <span class="precision-badge">
+                        <i class="fas fa-microscope"></i> Precision: 0.0000001g
+                    </span>
+                </div>
+            </div>
+            <div class="header-controls">
+                <div class="gold-rate-widget">
+                    <span>Gold Rate:</span>
+                    <div class="rate-input-group">
+                        <span class="currency-symbol">₹</span>
+                        <input type="text" 
+                               id="gold-rate-input" 
+                               value="6500.00"
+                               class="decimal-input"
+                               inputmode="decimal">
+                        <span class="unit">/g</span>
+                    </div>
+                    <button id="update-rate" class="btn-icon" title="Update Rate">
+                        <i class="fas fa-sync-alt"></i>
+                    </button>
+                </div>
+                <button id="add-transaction" class="btn btn-primary">
+                    <i class="fas fa-plus-circle"></i> Add Gold
+                </button>
+                <button id="export-data" class="btn btn-secondary" title="Export Data">
+                    <i class="fas fa-download"></i>
+                </button>
+                <button id="logout" class="btn btn-secondary">
+                    <i class="fas fa-lock"></i> Lock
+                </button>
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <main class="dashboard-main">
+            <!-- Overview Cards -->
+            <section class="overview-section">
+                <div class="card">
+                    <div class="card-icon gold-icon">
+                        <i class="fas fa-weight-hanging"></i>
+                    </div>
+                    <div class="card-content">
+                        <h3>Total Gold</h3>
+                        <p class="card-value micro-value" id="total-gold">0.0000000</p>
+                        <p class="card-subtext">grams</p>
+                        <p class="card-hint" id="gold-hint"></p>
+                    </div>
+                </div>
+                
+                <div class="card">
+                    <div class="card-icon invest-icon">
+                        <i class="fas fa-rupee-sign"></i>
+                    </div>
+                    <div class="card-content">
+                        <h3>Total Invested</h3>
+                        <p class="card-value" id="total-invested">₹0.00</p>
+                        <p class="card-subtext" id="transaction-count">0 transactions</p>
+                    </div>
+                </div>
+                
+                <div class="card">
+                    <div class="card-icon value-icon">
+                        <i class="fas fa-chart-bar"></i>
+                    </div>
+                    <div class="card-content">
+                        <h3>Current Value</h3>
+                        <p class="card-value" id="current-value">₹0.00</p>
+                        <p class="card-subtext">at ₹<span id="current-rate">6500.00</span>/g</p>
+                    </div>
+                </div>
+                
+                <div class="card">
+                    <div class="card-icon profit-icon">
+                        <i class="fas fa-trend-up"></i>
+                    </div>
+                    <div class="card-content">
+                        <h3>Profit/Loss</h3>
+                        <p class="card-value" id="profit-loss">₹0.00</p>
+                        <p class="card-subtext" id="profit-percent">0.00%</p>
+                        <p class="card-hint" id="profit-hint"></p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Insights Section -->
+            <section class="insights-section">
+                <div class="card large-card">
+                    <h3><i class="fas fa-chart-line"></i> Investment Growth</h3>
+                    <div class="chart-container">
+                        <canvas id="valueChart"></canvas>
+                    </div>
+                </div>
+                
+                <div class="card">
+                    <h3><i class="fas fa-info-circle"></i> Precision Info</h3>
+                    <div class="precision-info">
+                        <div class="precision-item">
+                            <i class="fas fa-weight"></i>
+                            <div>
+                                <strong>Gold Precision</strong>
+                                <p>Up to 7 decimal places (0.0000001g)</p>
+                            </div>
+                        </div>
+                        <div class="precision-item">
+                            <i class="fas fa-rupee-sign"></i>
+                            <div>
+                                <strong>Currency Precision</strong>
+                                <p>2 decimal places (₹0.01)</p>
+                            </div>
+                        </div>
+                        <div class="precision-item">
+                            <i class="fas fa-calculator"></i>
+                            <div>
+                                <strong>Rate Precision</strong>
+                                <p>2 decimal places (₹6500.00/g)</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Transactions Section -->
+            <section class="transactions-section">
+                <div class="section-header">
+                    <h2><i class="fas fa-exchange-alt"></i> Transactions</h2>
+                    <div class="section-controls">
+                        <div class="filter-group">
+                            <select id="filter-provider" class="select-control">
+                                <option value="all">All Providers</option>
+                                <option value="SafeGold">SafeGold</option>
+                                <option value="Paytm Gold">Paytm Gold</option>
+                                <option value="Google Pay Gold">Google Pay Gold</option>
+                            </select>
+                            <select id="sort-transactions" class="select-control">
+                                <option value="date-desc">Date: Newest First</option>
+                                <option value="date-asc">Date: Oldest First</option>
+                                <option value="weight-desc">Weight: High to Low</option>
+                                <option value="weight-asc">Weight: Low to High</option>
+                                <option value="rate-desc">Rate: High to Low</option>
+                                <option value="rate-asc">Rate: Low to High</option>
+                            </select>
+                        </div>
+                        <div class="stats-summary">
+                            <span id="total-weight">0.0000000g</span>
+                            <span class="divider">•</span>
+                            <span id="avg-rate">₹0.00/g</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="transactions-container">
+                    <div id="empty-state" class="empty-state">
+                        <i class="fas fa-coins"></i>
+                        <h3>No Transactions Yet</h3>
+                        <p>Add your first gold purchase to start tracking</p>
+                        <button id="add-first-btn" class="btn btn-primary">
+                            <i class="fas fa-plus"></i> Add First Transaction
+                        </button>
+                    </div>
+                    
+                    <div id="transactions-list" class="transactions-list" style="display: none;">
+                        <!-- Transactions will be added here dynamically -->
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <!-- Transaction Modal -->
+    <div id="transaction-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3><i class="fas fa-coins"></i> <span id="modal-title">Add Gold Purchase</span></h3>
+                <button class="close-modal">&times;</button>
+            </div>
+            <form id="transaction-form">
+                <input type="hidden" id="transaction-id">
+                
+                <div class="form-section">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="txn-date"><i class="fas fa-calendar"></i> Purchase Date</label>
+                            <input type="date" id="txn-date" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="txn-time"><i class="fas fa-clock"></i> Time</label>
+                            <input type="time" id="txn-time" required>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="form-section">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="txn-provider"><i class="fas fa-store"></i> Gold Provider</label>
+                            <select id="txn-provider" required>
+                                <option value="SafeGold">PhonePe SafeGold</option>
+                                <option value="Paytm Gold">Paytm Gold</option>
+                                <option value="Google Pay Gold">Google Pay Gold</option>
+                                <option value="Other">Other Platform</option>
+                            </select>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="txn-payment"><i class="fas fa-credit-card"></i> Payment Method</label>
+                            <select id="txn-payment" required>
+                                <option value="UPI">UPI</option>
+                                <option value="Debit Card">Debit Card</option>
+                                <option value="Credit Card">Credit Card</option>
+                                <option value="Net Banking">Net Banking</option>
+                                <option value="Wallet">Wallet</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="form-section">
+                    <h4><i class="fas fa-balance-scale"></i> Gold Details</h4>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="txn-rate">
+                                <i class="fas fa-tag"></i> Rate per gram (₹)
+                            </label>
+                            <input type="text" 
+                                   id="txn-rate" 
+                                   class="decimal-input"
+                                   inputmode="decimal"
+                                   pattern="[0-9]*\.?[0-9]*"
+                                   placeholder="6500.00"
+                                   required>
+                            <small class="hint">Current rate: ₹<span id="current-rate-hint">6500.00</span>/g</small>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="txn-weight">
+                                <i class="fas fa-weight-hanging"></i> Gold Weight (grams)
+                                <span class="micro-badge">up to 0.0000001g</span>
+                            </label>
+                            <div class="input-with-helper">
+                                <input type="text" 
+                                       id="txn-weight" 
+                                       class="decimal-input micro-value"
+                                       inputmode="decimal"
+                                       pattern="[0-9]*\.?[0-9]*"
+                                       placeholder="0.00123456"
+                                       required>
+                                <div class="input-helper">
+                                    <button type="button" class="helper-btn" data-value="0.001">1mg</button>
+                                    <button type="button" class="helper-btn" data-value="0.01">10mg</button>
+                                    <button type="button" class="helper-btn" data-value="0.1">100mg</button>
+                                    <button type="button" class="helper-btn" data-value="1">1g</button>
+                                </div>
+                            </div>
+                            <small class="hint">Supports 7 decimal places (0.0000001g)</small>
+                        </div>
+                    </div>
+                    
+                    <!-- Auto-calculation Preview -->
+                    <div class="calculation-preview">
+                        <div class="calc-header">
+                            <i class="fas fa-calculator"></i> Calculation Preview
+                        </div>
+                        <div class="calc-row">
+                            <span>Gold Value:</span>
+                            <span class="micro-value" id="calc-gold-value">₹0.00</span>
+                        </div>
+                        <div class="calc-row">
+                            <span>GST (3%):</span>
+                            <span class="micro-value" id="calc-gst">₹0.00</span>
+                        </div>
+                        <div class="calc-row total">
+                            <span>Total Amount:</span>
+                            <span class="micro-value" id="calc-total">₹0.00</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="form-section">
+                    <h4><i class="fas fa-money-bill-wave"></i> Final Amount</h4>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="txn-gst"><i class="fas fa-percentage"></i> GST Amount (₹)</label>
+                            <input type="text" 
+                                   id="txn-gst" 
+                                   class="decimal-input"
+                                   inputmode="decimal"
+                                   placeholder="0.00"
+                                   required>
+                            <small class="hint">Typically 3% of gold value</small>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="txn-total"><i class="fas fa-calculator"></i> Total Paid (₹)</label>
+                            <input type="text" 
+                                   id="txn-total" 
+                                   class="decimal-input"
+                                   inputmode="decimal"
+                                   placeholder="0.00"
+                                   required>
+                            <small class="hint">Gold value + GST</small>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="form-actions">
+                    <button type="button" id="delete-transaction" class="btn btn-danger" style="display: none;">
+                        <i class="fas fa-trash"></i> Delete
+                    </button>
+                    <button type="button" class="btn btn-secondary close-modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-save"></i> Save Transaction
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- JavaScript Files -->
+    <script src="app.js"></script>
+</body>
+  </html>
